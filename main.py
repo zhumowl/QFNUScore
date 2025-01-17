@@ -271,6 +271,7 @@ def get_all_semester_scores(session, cookies):
         return None, None
 
 
+# 解析HTML页面，返回学分和绩点的元组列表
 def parse_credits_and_gpa(html_content):
     """
     解析HTML页面，返回学分和绩点的元组列表
