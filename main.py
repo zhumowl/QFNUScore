@@ -272,14 +272,16 @@ def get_all_semester_scores(session, cookies):
 
 
 # 解析HTML页面，返回学分和绩点的元组列表
-def parse_credits_and_gpa(html_content):
+def parse_credits_and_gpa(session, cookies):
     """
     解析HTML页面，返回学分和绩点的元组列表
     参数:
         html_content: HTML页面内容
     返回: [(学分, 绩点), ...] 的列表
     """
-    soup = BeautifulSoup(html_content, "lxml")
+    url = "http://zhjw.qfnu.edu.cn/jsxsd/kscj/cjcx_list?kksj=2024-2025-1&kcxz=&kcmc=&xsfs=all"
+    response = session.get(url, cookies=cookies)
+    soup = BeautifulSoup(response.text, "lxml")
     results = []
 
     # 找到成绩表格
@@ -459,6 +461,20 @@ def main():
             return
 
         process_scores(session, cookies, user_account)
+
+        # 获取全部学期的总学分和平均绩点
+        total_credits, average_gpa = get_all_semester_scores(session, cookies)
+        logging.info(f"总学分: {total_credits}, 平均绩点: {average_gpa}")
+        with open("output.txt", "w", encoding="utf-8") as f:
+            f.write(f"总学分: {total_credits}, 平均绩点: {average_gpa}\n")
+        logging.info("总学分和平均绩点数据保存成功")
+
+        # 计算本学期绩点
+        credits_and_points = parse_credits_and_gpa(session, cookies)
+        average_gpa = calculate_average_gpa(credits_and_points)
+        logging.info(f"平均绩点: {average_gpa}")
+        with open("output.txt", "a", encoding="utf-8") as f:
+            f.write(f"2024-2025-1平均绩点: {average_gpa}\n")
 
     except Exception as e:
         handle_exception(e, user_account)
