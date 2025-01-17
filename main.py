@@ -329,118 +329,139 @@ def main():
     print_welcome()
     logging.info("开始执行")
     try:
-        logging.info("获取环境变量")
-
-        # 获取环境变量
         user_account, user_password = get_user_credentials()
-        if not user_account or not user_password:
-            logging.error(
-                "请在.env文件中设置USER_ACCOUNT、USER_PASSWORD、DD_BOT_TOKEN、DD_BOT_SECRET、FEISHU_BOT_URL、FEISHU_BOT_SECRET环境变量"
-            )
-            with open(".env", "w", encoding="utf-8") as f:
-                f.write(
-                    "USER_ACCOUNT=\nUSER_PASSWORD=\nDD_BOT_TOKEN=\nDD_BOT_SECRET=\nFEISHU_BOT_URL=\nFEISHU_BOT_SECRET="
-                )
+        if not validate_credentials(user_account, user_password):
             return
-        logging.info("获取环境变量成功，分别为：")
-        logging.info(f"DD_BOT_TOKEN: {DD_BOT_TOKEN}")
-        logging.info(f"DD_BOT_SECRET: {DD_BOT_SECRET}")
-        logging.info(f"FEISHU_BOT_URL: {FEISHU_BOT_URL}")
-        logging.info(f"FEISHU_BOT_SECRET: {FEISHU_BOT_SECRET}")
-        logging.info("开始模拟登录")
-        # 模拟登录并获取会话
+
         session, cookies = simulate_login(user_account, user_password)
-
         if not session or not cookies:
-            logging.error("无法建立会话，请检查网络连接或教务系统的可用性。")
-            if DD_BOT_TOKEN and DD_BOT_SECRET:
-                dingtalk(
-                    DD_BOT_TOKEN,
-                    DD_BOT_SECRET,
-                    "成绩监控通知",
-                    f"学号: {user_account}\n无法建立会话，请检查网络连接或教务系统的可用性。",
-                )
-            if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
-                feishu_notify(
-                    FEISHU_BOT_URL,
-                    FEISHU_BOT_SECRET,
-                    "成绩监控通知",
-                    f"学号: {user_account}\n无法建立会话，请检查网络连接或教务系统的可用性。",
-                )
+            notify_connection_issue(user_account)
             return
 
-        # 从文件加载上一次的成绩
-        last_score_list = load_scores_from_file()
-
-        # 访问成绩页面
-        score_page = get_score_page(session, cookies)
-
-        # 解析成绩
-        score_list = analyze_score_page(score_page)
-
-        # 将 score_list 转换为与 last_score_list 相同的格式
-        score_list_converted = [list(score) for score in score_list]
-
-        # 检查是否需要初始化保存成绩
-        if not last_score_list:
-            logging.info("初始化保存当前成绩")
-            save_scores_to_file(score_list_converted)
-            if DD_BOT_TOKEN and DD_BOT_SECRET:
-                dingtalk(
-                    DD_BOT_TOKEN,
-                    DD_BOT_SECRET,
-                    "成绩监控通知",
-                    f"学号: {user_account}\n初始化保存当前成绩成功",
-                )
-            if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
-                feishu_notify(
-                    FEISHU_BOT_URL,
-                    FEISHU_BOT_SECRET,
-                    "成绩监控通知",
-                    f"学号: {user_account}\n初始化保存当前成绩成功",
-                )
-        elif score_list_converted != last_score_list:
-            new_scores = get_new_scores(score_list_converted, last_score_list)
-            if new_scores:
-                logging.info(f"发现新成绩！{new_scores}")
-                message = "\n".join(
-                    [f"科目: {score[0]}\n成绩: {score[1]}" for score in new_scores]
-                )
-                if DD_BOT_TOKEN and DD_BOT_SECRET:
-                    dingtalk(
-                        DD_BOT_TOKEN,
-                        DD_BOT_SECRET,
-                        "成绩监控通知",
-                        f"学号: {user_account}\n发现新成绩！\n{message}",
-                    )
-                if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
-                    feishu_notify(
-                        FEISHU_BOT_URL,
-                        FEISHU_BOT_SECRET,
-                        "成绩监控通知",
-                        f"学号: {user_account}\n发现新成绩！\n{message}",
-                    )
-                # 更新成绩文件
-                save_scores_to_file(score_list_converted)
-        else:
-            logging.info(f"没有新成绩")
+        process_scores(session, cookies, user_account)
 
     except Exception as e:
-        logging.error(f"发生错误: {e}")
-        if DD_BOT_TOKEN and DD_BOT_SECRET:
-            dingtalk(
-                DD_BOT_TOKEN,
-                DD_BOT_SECRET,
-                "成绩监控通知",
-                f"学号: {user_account}\n发生错误: {e}",
+        handle_exception(e, user_account)
+
+
+def validate_credentials(user_account, user_password):
+    """
+    验证用户凭据是否存在
+    """
+    logging.info("获取环境变量")
+    if not user_account or not user_password:
+        logging.error(
+            "请在.env文件中设置USER_ACCOUNT、USER_PASSWORD、DD_BOT_TOKEN、DD_BOT_SECRET、FEISHU_BOT_URL、FEISHU_BOT_SECRET环境变量"
+        )
+        with open(".env", "w", encoding="utf-8") as f:
+            f.write(
+                "USER_ACCOUNT=\nUSER_PASSWORD=\nDD_BOT_TOKEN=\nDD_BOT_SECRET=\nFEISHU_BOT_URL=\nFEISHU_BOT_SECRET="
             )
-        if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
-            feishu_notify(
-                FEISHU_BOT_URL,
-                FEISHU_BOT_SECRET,
-                "成绩监控通知",
-                f"学号: {user_account}\n发生错误: {e}",
-            )
+        return False
+    logging.info("获取环境变量成功")
+    return True
+
+
+def notify_connection_issue(user_account):
+    """
+    通知用户连接问题
+    """
+    logging.error("无法建立会话，请检查网络连接或教务系统的可用性。")
+    if DD_BOT_TOKEN and DD_BOT_SECRET:
+        dingtalk(
+            DD_BOT_TOKEN,
+            DD_BOT_SECRET,
+            "成绩监控通知",
+            f"学号: {user_account}\n无法建立会话，请检查网络连接或教务系统的可用性。",
+        )
+    if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
+        feishu_notify(
+            FEISHU_BOT_URL,
+            FEISHU_BOT_SECRET,
+            "成绩监控通知",
+            f"学号: {user_account}\n无法建立会话，请检查网络连接或教务系统的可用性。",
+        )
+
+
+def process_scores(session, cookies, user_account):
+    """
+    处理成绩信息
+    """
+    last_score_list = load_scores_from_file()
+    score_page = get_score_page(session, cookies)
+    score_list = analyze_score_page(score_page)
+    score_list_converted = [list(score) for score in score_list]
+
+    if not last_score_list:
+        initialize_scores(score_list_converted, user_account)
+    elif score_list_converted != last_score_list:
+        update_scores(score_list_converted, last_score_list, user_account)
+
+
+def initialize_scores(score_list_converted, user_account):
+    """
+    初始化保存当前成绩
+    """
+    logging.info("初始化保存当前成绩")
+    save_scores_to_file(score_list_converted)
+    notify_new_scores("初始化保存当前成绩成功", user_account)
+
+
+def update_scores(score_list_converted, last_score_list, user_account):
+    """
+    更新成绩并通知用户
+    """
+    new_scores = get_new_scores(score_list_converted, last_score_list)
+    if new_scores:
+        logging.info(f"发现新成绩！{new_scores}")
+        message = "\n".join(
+            [f"科目: {score[0]}\n成绩: {score[1]}" for score in new_scores]
+        )
+        notify_new_scores(f"发现新成绩！\n{message}", user_account)
+        save_scores_to_file(score_list_converted)
+    else:
+        logging.info("没有新成绩")
+
+
+def notify_new_scores(message, user_account):
+    """
+    通过钉钉和飞书通知新成绩
+    """
+    if DD_BOT_TOKEN and DD_BOT_SECRET:
+        dingtalk(
+            DD_BOT_TOKEN,
+            DD_BOT_SECRET,
+            "成绩监控通知",
+            f"学号: {user_account}\n{message}",
+        )
+    if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
+        feishu_notify(
+            FEISHU_BOT_URL,
+            FEISHU_BOT_SECRET,
+            "成绩监控通知",
+            f"学号: {user_account}\n{message}",
+        )
+
+
+def handle_exception(e, user_account):
+    """
+    处理异常并通知用户
+    """
+    logging.error(f"发生错误: {e}")
+    if DD_BOT_TOKEN and DD_BOT_SECRET:
+        dingtalk(
+            DD_BOT_TOKEN,
+            DD_BOT_SECRET,
+            "成绩监控通知",
+            f"学号: {user_account}\n发生错误: {e}",
+        )
+    if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
+        feishu_notify(
+            FEISHU_BOT_URL,
+            FEISHU_BOT_SECRET,
+            "成绩监控通知",
+            f"学号: {user_account}\n发生错误: {e}",
+        )
 
 
 if __name__ == "__main__":
