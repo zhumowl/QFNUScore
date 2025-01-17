@@ -246,6 +246,38 @@ def load_scores_from_file(filename="scores.json"):
         return []
 
 
+# 计算平均学分绩点
+def calculate_average_gpa(grades):
+    """
+    计算平均学分绩点
+    参数:
+        grades: [(成绩, 学分), ...] 的列表
+    返回: 平均学分绩点
+    """
+    total_points = 0
+    total_credits = 0
+
+    for score, credit in grades:
+        if score >= 90:
+            grade_point = 4.0
+        elif score >= 80:
+            grade_point = 3.0
+        elif score >= 70:
+            grade_point = 2.0
+        elif score >= 60:
+            grade_point = 1.0
+        else:
+            grade_point = 0.0
+
+        total_points += grade_point * credit
+        total_credits += credit
+
+    if total_credits == 0:
+        return 0
+
+    return total_points / total_credits
+
+
 def main():
     """
     主函数，协调整个程序的执行流程
