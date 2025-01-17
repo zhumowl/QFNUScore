@@ -474,7 +474,7 @@ def main():
         average_gpa = calculate_average_gpa(credits_and_points)
         logging.info(f"平均绩点: {average_gpa}")
         with open("output.txt", "a", encoding="utf-8") as f:
-            f.write(f"2024-2025-1平均绩点: {average_gpa}\n")
+            f.write(f"2024-2025-1平均绩点: {average_gpa}")
 
     except Exception as e:
         handle_exception(e, user_account)
