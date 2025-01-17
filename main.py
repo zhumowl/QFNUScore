@@ -322,28 +322,6 @@ def calculate_average_gpa(credits_and_points):
     return total_points / total_credits
 
 
-def main():
-    """
-    主函数，协调整个程序的执行流程
-    """
-    print_welcome()
-    logging.info("开始执行")
-    try:
-        user_account, user_password = get_user_credentials()
-        if not validate_credentials(user_account, user_password):
-            return
-
-        session, cookies = simulate_login(user_account, user_password)
-        if not session or not cookies:
-            notify_connection_issue(user_account)
-            return
-
-        process_scores(session, cookies, user_account)
-
-    except Exception as e:
-        handle_exception(e, user_account)
-
-
 def validate_credentials(user_account, user_password):
     """
     验证用户凭据是否存在
@@ -462,6 +440,28 @@ def handle_exception(e, user_account):
             "成绩监控通知",
             f"学号: {user_account}\n发生错误: {e}",
         )
+
+
+def main():
+    """
+    主函数，协调整个程序的执行流程
+    """
+    print_welcome()
+    logging.info("开始执行")
+    try:
+        user_account, user_password = get_user_credentials()
+        if not validate_credentials(user_account, user_password):
+            return
+
+        session, cookies = simulate_login(user_account, user_password)
+        if not session or not cookies:
+            notify_connection_issue(user_account)
+            return
+
+        process_scores(session, cookies, user_account)
+
+    except Exception as e:
+        handle_exception(e, user_account)
 
 
 if __name__ == "__main__":
