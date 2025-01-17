@@ -9,6 +9,7 @@ import json
 from dingtalk import dingtalk
 from feishu import feishu_notify
 import logging
+import re
 
 load_dotenv()
 
@@ -246,29 +247,71 @@ def load_scores_from_file(filename="scores.json"):
         return []
 
 
+# 获取全部学期的绩点和学分
+def get_all_semester_scores(session, cookies):
+    """
+    获取全部学期的绩点和学分
+    参数:
+        session: requests会话对象
+        cookies: 会话cookies
+    返回: 总学分和平均绩点
+    """
+    url = "http://zhjw.qfnu.edu.cn/jsxsd/kscj/cjcx_list"
+    response = session.get(url, cookies=cookies)
+
+    # 使用正则表达式提取总学分和平均绩点
+    total_credits_match = re.search(r"所修总学分:(\d+)", response.text)
+    average_gpa_match = re.search(r"平均学分绩点:(\d+\.\d+)", response.text)
+
+    if total_credits_match and average_gpa_match:
+        total_credits = total_credits_match.group(1)
+        average_gpa = average_gpa_match.group(1)
+        return total_credits, average_gpa
+    else:
+        return None, None
+
+
+def parse_credits_and_gpa(html_content):
+    """
+    解析HTML页面，返回学分和绩点的元组列表
+    参数:
+        html_content: HTML页面内容
+    返回: [(学分, 绩点), ...] 的列表
+    """
+    soup = BeautifulSoup(html_content, "lxml")
+    results = []
+
+    # 找到成绩表格
+    table = soup.find("table", {"id": "dataList"})
+    if table:
+        # 遍历表格的每一行
+        rows = table.find_all("tr")[1:]  # 跳过表头
+        for row in rows:
+            columns = row.find_all("td")
+            if len(columns) > 9:  # 确保有足够的列
+                try:
+                    credits = float(columns[7].get_text(strip=True))
+                    gpa = float(columns[9].get_text(strip=True))
+                    results.append((credits, gpa))
+                except ValueError:
+                    # 如果转换失败，跳过该行
+                    continue
+
+    return results
+
+
 # 计算平均学分绩点
-def calculate_average_gpa(grades):
+def calculate_average_gpa(credits_and_points):
     """
     计算平均学分绩点
     参数:
-        grades: [(成绩, 学分), ...] 的列表
+        credits_and_points: [(学分, 绩点), ...] 的列表
     返回: 平均学分绩点
     """
     total_points = 0
     total_credits = 0
 
-    for score, credit in grades:
-        if score >= 90:
-            grade_point = 4.0
-        elif score >= 80:
-            grade_point = 3.0
-        elif score >= 70:
-            grade_point = 2.0
-        elif score >= 60:
-            grade_point = 1.0
-        else:
-            grade_point = 0.0
-
+    for credit, grade_point in credits_and_points:
         total_points += grade_point * credit
         total_credits += credit
 
