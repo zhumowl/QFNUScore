@@ -11,7 +11,9 @@
 #### 点击链接加入群聊【Easy-QFNU ｜曲师大选课指北群】：https://qm.qq.com/q/xDrtQHMDNm
 
 #### 点击链接加入群聊【Easy-QFNU ｜曲师大选课指北群 2】：https://qm.qq.com/q/Zw6GRHucim
+关注微信公众号获取更多内容
 
+![img](https://picx.zhimg.com/80/v2-a42b58d3c6fa27d3ebe03b7090a7cf63.jpeg)
 ## 效果展示
 
 ![效果](https://pica.zhimg.com/80/v2-ab040cb6e2c97cd56de73d09777c4f07.png)
