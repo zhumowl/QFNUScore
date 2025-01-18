@@ -373,9 +373,13 @@ def process_scores(session, cookies, user_account):
     score_list_converted = [list(score) for score in score_list]
 
     if not last_score_list:
+        logging.info("初始化保存当前成绩")
         initialize_scores(score_list_converted, user_account)
     elif score_list_converted != last_score_list:
+        logging.info("更新成绩")
         update_scores(score_list_converted, last_score_list, user_account)
+    else:
+        logging.info("没有新成绩")
 
 
 def initialize_scores(score_list_converted, user_account):
@@ -392,9 +396,6 @@ def update_scores(score_list_converted, last_score_list, user_account):
     更新成绩并通知用户
     """
     new_scores = get_new_scores(score_list_converted, last_score_list)
-    logging.debug(f"当前成绩: {score_list_converted}")
-    logging.debug(f"上次成绩: {last_score_list}")
-    logging.debug(f"新增成绩: {new_scores}")
 
     if new_scores:
         logging.info(f"发现新成绩！{new_scores}")
@@ -403,8 +404,6 @@ def update_scores(score_list_converted, last_score_list, user_account):
         )
         notify_new_scores(f"发现新成绩！\n{message}", user_account)
         save_scores_to_file(score_list_converted)
-    else:
-        logging.info("没有新成绩")
 
 
 def notify_new_scores(message, user_account):
@@ -463,7 +462,7 @@ def main():
         if not session or not cookies:
             notify_connection_issue(user_account)
             return
-
+        logging.info("开始处理成绩")
         process_scores(session, cookies, user_account)
 
         # 获取全部学期的总学分和平均绩点
