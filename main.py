@@ -373,7 +373,6 @@ def process_scores(session, cookies, user_account):
     score_list_converted = [list(score) for score in score_list]
 
     if not last_score_list:
-        logging.info("初始化保存当前成绩")
         initialize_scores(score_list_converted, user_account)
     elif score_list_converted != last_score_list:
         logging.info("更新成绩")
