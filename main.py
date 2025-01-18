@@ -392,6 +392,10 @@ def update_scores(score_list_converted, last_score_list, user_account):
     更新成绩并通知用户
     """
     new_scores = get_new_scores(score_list_converted, last_score_list)
+    logging.debug(f"当前成绩: {score_list_converted}")
+    logging.debug(f"上次成绩: {last_score_list}")
+    logging.debug(f"新增成绩: {new_scores}")
+
     if new_scores:
         logging.info(f"发现新成绩！{new_scores}")
         message = "\n".join(
