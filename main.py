@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 import json
 from dingtalk import dingtalk
-from feishu import feishu_notify
+from feishu import feishu
 import logging
 import re
 
@@ -179,7 +179,7 @@ def analyze_score_page(pagehtml):
     table = soup.find("table", {"id": "dataList"})
     if table:
         # 遍历表格的每一行
-        rows = table.find_all("tr")[1:]  # 跳过表头
+        rows = table.find_all("tr")[1:]  # 跳过表头 # type: ignore
         for row in rows:
             columns = row.find_all("td")
             if len(columns) > 5:
@@ -288,7 +288,7 @@ def parse_credits_and_gpa(session, cookies):
     table = soup.find("table", {"id": "dataList"})
     if table:
         # 遍历表格的每一行
-        rows = table.find_all("tr")[1:]  # 跳过表头
+        rows = table.find_all("tr")[1:]  # 跳过表头 # type: ignore
         for row in rows:
             columns = row.find_all("td")
             if len(columns) > 9:  # 确保有足够的列
@@ -355,11 +355,9 @@ def notify_connection_issue(user_account):
             f"学号: {user_account}\n无法建立会话，请检查网络连接或教务系统的可用性。",
         )
     if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
-        feishu_notify(
-            FEISHU_BOT_URL,
-            FEISHU_BOT_SECRET,
-            "成绩监控通知",
-            f"学号: {user_account}\n无法建立会话，请检查网络连接或教务系统的可用性。",
+        feishu(
+            title="成绩监控通知",
+            content=f"学号: {user_account}\n无法建立会话，请检查网络连接或教务系统的可用性。",
         )
 
 
@@ -417,11 +415,9 @@ def notify_new_scores(message, user_account):
             f"学号: {user_account}\n{message}",
         )
     if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
-        feishu_notify(
-            FEISHU_BOT_URL,
-            FEISHU_BOT_SECRET,
-            "成绩监控通知",
-            f"学号: {user_account}\n{message}",
+        feishu(
+            title="成绩监控通知",
+            content=f"学号: {user_account}\n{message}",
         )
 
 
@@ -438,11 +434,9 @@ def handle_exception(e, user_account):
             f"学号: {user_account}\n发生错误: {e}",
         )
     if FEISHU_BOT_URL and FEISHU_BOT_SECRET:
-        feishu_notify(
-            FEISHU_BOT_URL,
-            FEISHU_BOT_SECRET,
-            "成绩监控通知",
-            f"学号: {user_account}\n发生错误: {e}",
+        feishu(
+            title="成绩监控通知",
+            content=f"学号: {user_account}\n发生错误: {e}",
         )
 
 

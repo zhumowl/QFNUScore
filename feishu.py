@@ -1,44 +1,67 @@
+import time
+import hmac
+import hashlib
+import base64
 import requests
+import json
+import os
 import logging
 
 
-def feishu_notify(FEISHU_BOT_URL, FEISHU_BOT_SECRET, title, text):
+def feishu(title: str, content: str) -> dict:
     """
-    发送飞书通知
-    参数:
-        FEISHU_BOT_URL: 飞书机器人URL
-        FEISHU_BOT_SECRET: 飞书机器人验证关键词
-        title: 消息标题
-        text: 消息内容
-    """
-    if not FEISHU_BOT_URL or not FEISHU_BOT_SECRET:
-        logging.error("飞书机器人URL或SECRET未配置")
-        return
+    发送飞书机器人消息
 
+    Args:
+        feishu_webhook: 飞书机器人的webhook地址
+        feishu_secret: 安全设置中的签名校验密钥
+        title: 消息标题
+        content: 消息内容
+
+    Returns:
+        dict: 接口返回结果
+    """
+    # 环境变量
+    FEISHU_BOT_URL = os.environ.get("FEISHU_BOT_URL")
+    FEISHU_BOT_SECRET = os.environ.get("FEISHU_BOT_SECRET")
+
+    feishu_webhook = FEISHU_BOT_URL
+    feishu_secret = FEISHU_BOT_SECRET
+    timestamp = str(int(time.time()))
+
+    # 计算签名
+    string_to_sign = f"{timestamp}\n{feishu_secret}"
+    hmac_code = hmac.new(
+        string_to_sign.encode("utf-8"), digestmod=hashlib.sha256
+    ).digest()
+    sign = base64.b64encode(hmac_code).decode("utf-8")
+
+    # 构建请求头
     headers = {"Content-Type": "application/json"}
-    data = {
-        "msg_type": "text",
-        "content": {"text": f"{title}\n{text}\n{FEISHU_BOT_SECRET}"},
+
+    # 构建消息内容
+    msg = {
+        "timestamp": timestamp,
+        "sign": sign,
+        "msg_type": "post",
+        "content": {
+            "post": {
+                "zh_cn": {
+                    "title": title,
+                    "content": [[{"tag": "text", "text": content}]],
+                }
+            }
+        },
     }
 
-    response = requests.post(FEISHU_BOT_URL, headers=headers, json=data)
-    if response.json()["code"] == 0:
-        logging.info("飞书通知发送成功")
+    # 发送请求
+    try:
+        if not isinstance(feishu_webhook, str):
+            logging.error(f"飞书webhook未配置")
+            return {"error": "飞书webhook未配置"}
+        response = requests.post(feishu_webhook, headers=headers, data=json.dumps(msg))
+        logging.info(f"飞书发送通知消息成功🎉\n{response.json()}")
         return response.json()
-    else:
-        logging.error(
-            f"飞书通知发送失败，状态码: {response.status_code}，错误信息: {response.json()}"
-        )
-        return response.json()
-
-
-if __name__ == "__main__":
-    FEISHU_BOT_URL = "https://open.feishu.cn/open-apis/bot/v2/hook/f20a7d17-af7c-4b1f-b495-68ebf1ddd714"
-    FEISHU_BOT_SECRET = "W1ndys"
-    res = feishu_notify(
-        FEISHU_BOT_URL,
-        FEISHU_BOT_SECRET,
-        "测试",
-        "测试内容",
-    )
-    print(res)
+    except Exception as e:
+        logging.error(f"飞书发送通知消息失败😞\n{e}")
+        return {"error": str(e)}
